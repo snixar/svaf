@@ -1,0 +1,52 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { siteConfig } from '../../lib/config/site';
+import { resolvePostAssetPath } from '../../lib/utils/markdown';
+import SearchPanel from '../../components/SearchPanel.svelte';
+
+const allPosts = await getCollection('posts', (post) => !post.data.draft && !post.data.hide);
+allPosts.sort((a, b) => {
+  if (a.data.pinned && !b.data.pinned) return -1;
+  if (!a.data.pinned && b.data.pinned) return 1;
+  return new Date(b.data.published).getTime() - new Date(a.data.published).getTime();
+});
+
+// Pass ALL posts to the client; directory filtering is done client-side in SearchPanel
+// because `output: "static"` means the same HTML serves all ?dir=xxx variants
+const postsData = allPosts.map(post => ({
+  slug: post.slug,
+  title: post.data.title,
+  description: post.data.description,
+  published: post.data.published.toISOString(),
+  pinned: post.data.pinned,
+  dir: post.data.dir || '未分类',
+  image: resolvePostAssetPath(post.slug, post.data.image || ''),
+}));
+
+// Encode post data as base64 so crawlers can't read article titles/descriptions
+const encodedPosts = btoa(unescape(encodeURIComponent(JSON.stringify(postsData))));
+
+const wordCountMap: Record<string, number> = {};
+let totalWords = 0;
+for (const post of allPosts) {
+  const body = post.body || '';
+  const chineseChars = body.match(/[一-龥]/g) || [];
+  const englishWords = body.match(/[a-zA-Z]+/g) || [];
+  const count = chineseChars.length + englishWords.length;
+  wordCountMap[post.slug] = count;
+  totalWords += count;
+}
+---
+
+<BaseLayout title={`博客文章 - ${siteConfig.title}`} description="浏览所有文章">
+  <div class="container mx-auto max-w-4xl px-4 py-12">
+    <SearchPanel
+      client:load
+      encodedPosts={encodedPosts}
+      wordCountMap={wordCountMap}
+      totalPosts={allPosts.length}
+      totalWords={totalWords}
+    />
+  </div>
+</BaseLayout>

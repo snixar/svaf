@@ -1,0 +1,117 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { siteConfig } from '../../lib/config/site';
+import { resolvePostAssetPath } from '../../lib/utils/markdown';
+import Giscus from '../../components/Giscus.svelte';
+import ImageViewer from '../../components/ImageViewer.svelte';
+import PageViews from '../../components/PageViews.svelte';
+import PostToc from '../../components/PostToc.svelte';
+import ProtectedArticle from '../../components/ProtectedArticle.svelte';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts', (post) => !post.data.draft);
+  return posts.map(post => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+}
+
+const { post } = Astro.props;
+const meta = post.data;
+const ogImage = meta.image
+  ? (meta.image.startsWith('http') ? meta.image : `${siteConfig.url}${resolvePostAssetPath(post.slug, meta.image)}`)
+  : `${siteConfig.url}${siteConfig.ogImage}`;
+
+// Encode raw markdown body as base64 so crawlers can't read it
+const encodedBody = btoa(unescape(encodeURIComponent(post.body || '')));
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+---
+
+<BaseLayout
+  title={`${meta.title} - ${siteConfig.title}`}
+  description={meta.description}
+  image={ogImage}
+  isPost={true}
+  canonicalURL={`${siteConfig.url}/posts/${post.slug}/`}
+>
+  <article class="container mx-auto max-w-3xl px-4 py-12">
+    <div class="mb-8">
+      <a href={`/posts/?dir=${encodeURIComponent(meta.dir || '未分类')}`} class="inline-flex items-center justify-center rounded-md text-sm font-medium border px-4 py-2 hover:bg-accent transition-colors">
+        &larr; 返回{meta.dir || '未分类'}
+      </a>
+    </div>
+
+    <header class="mb-8">
+      <div class="mb-4 flex items-center gap-2">
+        {meta.pinned && (
+          <span class="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold">置顶</span>
+        )}
+        <time class="text-sm text-muted-foreground">
+          {formatDate(meta.published)}
+        </time>
+        <PageViews
+          client:load
+          pathname={`/posts/${post.slug}/`}
+          cacheKey={`pv:${post.slug}`}
+          class="text-sm text-muted-foreground"
+          prefix="&middot; "
+        />
+      </div>
+
+      <h1 class="mb-4 text-4xl font-bold">{meta.title}</h1>
+      <p class="text-lg text-muted-foreground">{meta.description}</p>
+
+      {meta.image && (
+        <div class="mt-6">
+          <img
+            src={resolvePostAssetPath(post.slug, meta.image)}
+            alt={meta.title}
+            class="w-full rounded-lg object-cover"
+          />
+        </div>
+      )}
+    </header>
+
+    <div
+      id="article-content"
+      class="prose prose-neutral dark:prose-invert max-w-none break-words [overflow-wrap:anywhere]
+        prose-headings:text-foreground
+        prose-p:text-foreground
+        prose-strong:text-foreground
+        prose-a:text-primary prose-a:underline prose-a:underline-offset-4 prose-a:break-all prose-a:transition-opacity prose-a:hover:opacity-80
+        prose-blockquote:border-l-primary prose-blockquote:text-muted-foreground
+        prose-code:bg-muted prose-code:text-foreground prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:before:content-none prose-code:after:content-none
+        prose-pre:bg-muted prose-pre:px-4 prose-pre:py-2 prose-pre:text-foreground prose-pre:overflow-x-auto
+        prose-hr:border-border
+        prose-th:border prose-th:border-border prose-th:bg-muted
+        prose-td:border prose-td:border-border
+        prose-img:rounded-lg"
+    >
+      <ProtectedArticle client:load encodedContent={encodedBody} containerId="article-content" />
+    </div>
+
+    <PostToc client:load container={null} />
+
+    <div id="comments">
+      <Giscus client:load />
+    </div>
+
+    <footer class="mt-12 border-t pt-8">
+      <div class="flex justify-center">
+        <a href={`/posts/?dir=${encodeURIComponent(meta.dir || '未分类')}`} class="inline-flex items-center justify-center rounded-md text-sm font-medium bg-primary text-primary-foreground px-4 py-2 hover:opacity-90 transition-opacity">
+          &larr; 返回{meta.dir || '未分类'}
+        </a>
+      </div>
+    </footer>
+  </article>
+
+  <ImageViewer client:load />
+</BaseLayout>

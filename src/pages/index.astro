@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { siteConfig } from '../lib/config/site';
+import DirectoryCards from '../components/DirectoryCards.svelte';
+
+const allPosts = await getCollection('posts', (post) => !post.data.draft && !post.data.hide);
+
+allPosts.sort((a, b) => {
+  if (a.data.pinned && !b.data.pinned) return -1;
+  if (!a.data.pinned && b.data.pinned) return 1;
+  return new Date(b.data.published).getTime() - new Date(a.data.published).getTime();
+});
+
+const dirMap = new Map<string, number>();
+for (const post of allPosts) {
+  const dir = post.data.dir || '未分类';
+  dirMap.set(dir, (dirMap.get(dir) || 0) + 1);
+}
+
+const directories = Array.from(dirMap.entries())
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => b.count - a.count);
+
+const encodedDirs = btoa(unescape(encodeURIComponent(JSON.stringify(directories))));
+---
+
+<BaseLayout title={siteConfig.title}>
+  <DirectoryCards client:load {encodedDirs} totalPosts={allPosts.length} />
+</BaseLayout>

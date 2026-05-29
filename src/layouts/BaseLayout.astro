@@ -1,0 +1,103 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import { siteConfig } from '../lib/config/site';
+import NavBar from '../components/NavBar.astro';
+import Footer from '../components/Footer.astro';
+import BackToTop from '../components/BackToTop.svelte';
+import Analytics from '../components/Analytics.svelte';
+import CookieConsent from '../components/CookieConsent.svelte';
+import ThemeToggle from '../components/ThemeToggle.svelte';
+import MotionAnimations from '../components/MotionAnimations.svelte';
+import '../app.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  isPost?: boolean;
+  slug?: string;
+  canonicalURL?: string;
+}
+
+const {
+  title = siteConfig.title,
+  description = siteConfig.description,
+  image = `${siteConfig.url}${siteConfig.ogImage}`,
+  isPost = false,
+  canonicalURL,
+} = Astro.props;
+
+const currentPath = Astro.url.pathname;
+const isHomePage = currentPath === '/';
+const currentCanonical = canonicalURL || `${siteConfig.url}${currentPath}`;
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="description" content={description} />
+    <meta name="keywords" content={siteConfig.keywords.join(', ')} />
+
+    <title>{title}</title>
+    <link rel="icon" href="data:," />
+    <link rel="canonical" href={currentCanonical} />
+    <link rel="alternate" type="application/rss+xml" title={`${siteConfig.title} RSS Feed`} href="/rss.xml" />
+
+    <!-- Open Graph -->
+    <meta property="og:site_name" content={siteConfig.title} />
+    <meta property="og:locale" content={siteConfig.lang} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={currentCanonical} />
+    <meta property="og:image" content={image} />
+    {isPost ? (
+      <meta property="og:type" content="article" />
+    ) : (
+      <meta property="og:type" content="website" />
+    )}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={image} />
+
+    <!-- Theme flash prevention -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme');
+          var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme:dark)').matches);
+          if (dark) {
+            document.documentElement.classList.add('dark');
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0a0a0a');
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- Astro View Transitions: enables smooth cross-fade between pages -->
+    <ViewTransitions />
+  </head>
+  <body>
+    <!-- Always-visible theme toggle (fixed top-right) -->
+    <div class="fixed top-4 right-4 z-50">
+      <ThemeToggle client:load />
+    </div>
+
+    <NavBar isHome={isHomePage} />
+    <slot />
+    <Footer />
+
+    <!-- Scroll animations (Motion One) -->
+    <MotionAnimations client:load />
+
+    <!-- Floating action buttons (client islands) -->
+    <BackToTop client:load />
+    <Analytics client:load />
+    <CookieConsent client:load />
+  </body>
+</html>

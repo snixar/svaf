@@ -1,0 +1,9 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import EditorPage from '../components/write/EditorPage.svelte';
+---
+
+<BaseLayout title="文章管理 - svaf">
+  <meta name="robots" content="noindex" slot="head" />
+  <EditorPage client:load />
+</BaseLayout>
