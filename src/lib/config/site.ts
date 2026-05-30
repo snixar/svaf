@@ -1,3 +1,17 @@
+export interface UmamiConfig {
+	src: string;
+	websiteId: string;
+}
+
+export interface AnalyticsConfig {
+	umami?: UmamiConfig;
+	cfWebAnalytics?: { token: string };
+	cfUmami?: { src: string };
+	baidu?: { id: string };
+	google?: { measurementId: string };
+	clarity?: { projectId: string };
+}
+
 export const siteConfig = {
 	name: 'SVAF',
 	siteName: 'snixar blog',
@@ -24,7 +38,12 @@ export const siteConfig = {
 		roomUrl: ''
 	},
 	services: {},
-	analytics: {},
+	analytics: {
+		umami: {
+			src: import.meta.env.PUBLIC_UMAMI_SRC || 'https://cloud.umami.is/script.js',
+			websiteId: import.meta.env.PUBLIC_UMAMI_WEBSITE_ID || '',
+		},
+	} satisfies AnalyticsConfig,
 	giscus: {
 		repo: '',
 		repoId: '',
